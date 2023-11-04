@@ -11,7 +11,7 @@ Mat guassNoise, guassNoiseImg;
 */
 void readColorImage()
 {
-    srcImg = imread("/home/ssc/image_process/src/line_follower/src/Lena.jpg");
+    srcImg = imread("/home/ssc/image_process/src/line_follower/src/road2.png");
     // srcImg = imread("/home/ssc/image_process/src/line_follower/src/test.jpg");
     imshow("srcImg", srcImg);
 }
@@ -40,7 +40,7 @@ void perspectiveTransform1()
     warpPerspective(srcPerspective, dstPerspective, transMatrix, srcPerspective.size());
 
     imshow("dstPerspective13", dstPerspective);
-    imwrite("/home/ssc/image_process/src/line_follower/src/Lena_per.jpg", dstPerspective);
+    // imwrite("/home/ssc/image_process/src/line_follower/src/Lena_per.jpg", dstPerspective);
     
     srcImg = dstPerspective;
 }

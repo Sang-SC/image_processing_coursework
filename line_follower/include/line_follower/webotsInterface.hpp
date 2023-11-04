@@ -19,5 +19,6 @@
 
 void webotsInit();
 void enableKeyboard();
+void pid_init(float Kp,float Ki,float Kd);
 
 #endif

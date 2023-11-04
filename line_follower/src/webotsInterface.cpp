@@ -4,6 +4,7 @@
 **********************************************************/
 #include "line_follower/webotsInterface.hpp"
 #include "line_follower/level1.hpp"
+#include "line_follower/level2.hpp"
 
 using namespace cv;
 using std::string;
@@ -36,13 +37,78 @@ ros::ServiceClient keyboardEnableClient;      // 键盘控制service客户端
 webots_ros::set_int keyboardEnablesrv;        // 键盘控制service数据
 
 
+struct pid
+{
+    float pid_setValue;     // 设置值
+    float pid_actualValue;  // 当前值
+    float Kp;
+    float Ki;
+    float Kd;
+    float err;              // 偏差
+    float last_err;         // 上一次的偏差
+    float speed;
+    float T;                // 更新周期
+    float integral;         // 累积误差
+}_pid;
+void pid_init(float Kp,float Ki,float Kd){
+    _pid.pid_setValue = 0.0;
+    _pid.pid_actualValue = 0.0;
+    _pid.Kp = Kp;
+    _pid.Ki = Ki;
+    _pid.Kd = Kd;
+    _pid.err = 0.0;
+    _pid.last_err = 0.0;
+    _pid.speed = 0.0;
+    _pid.T = .0 ;
+    _pid.integral = 0.0;
+}
+
+float pid_run(float value){
+    _pid.pid_setValue = value;
+    _pid.err = _pid.pid_setValue - _pid.pid_actualValue;
+    _pid.integral = _pid.integral + _pid.err;
+    _pid.speed = _pid.err * _pid.Kp + _pid.integral *_pid.T * _pid.Ki + (_pid.err - _pid.last_err) * _pid.Kd;
+    _pid.last_err = _pid.err;
+    _pid.pid_actualValue = _pid.speed;
+
+    return _pid.pid_actualValue;
+}
+
+
+void updateSpeedLevel2(Point middle_point) {  
+    double speed_diff=0.0;
+    double cspeed=0.0;
+    speed_diff = pid_run((float)(middle_point.x - 32))/2.0;
+    cout<<"speed_diff="<<speed_diff<<endl;
+    speeds[0] = speed_diff;
+    speeds[1] = -speed_diff;
+    
+    // 确定基准速度
+    if (abs(middle_point.x - 32) <= 2){
+        cspeed=9.0;
+    }else if (abs(middle_point.x - 32) > 2){
+        cspeed=7.0;
+    }
+
+    cout<<"leftspeed="<<speeds[0]<<endl;
+    cout<<"rightspeed="<<speeds[1]<<endl; 
+    for (int i = 0; i < NMOTORS; ++i) {
+        // 发送给webots更新机器人速度
+        set_velocity_client = n->serviceClient<webots_ros::set_float>(string("/tianbot_mini/") + string(motorNames[i]) + string("/set_velocity"));   
+        set_velocity_srv.request.value = speeds[i]+cspeed;
+        set_velocity_client.call(set_velocity_srv);
+    }
+}
+
+
 /*
 * 函数功能：webots摄像头数据回调函数
 */
 void cameraCB(const sensor_msgs::Image::ConstPtr &value){
     // 将webots提供的uchar格式数据转换成Mat
     Mat srcImg = Mat(value->data).clone().reshape(4, 512);
-    level1(srcImg);
+    // level1(srcImg);
+    updateSpeedLevel2(level2(srcImg));
 }
 
 
@@ -96,19 +162,21 @@ void keyboardDataCB(const webots_ros::Int32Stamped::ConstPtr &value)
     {
         // 左转
         case 314:
-            angular_temp+=0.1;
+            angular_temp = 0.3;
             break;
         // 前进
         case 315:
-            linear_temp += 0.1;
+            linear_temp = 0.7;
+            angular_temp = 0;
             break;
         // 右转
         case 316:
-            angular_temp-=0.1;
+            angular_temp = -0.3;
             break;
         // 后退
         case 317:
-            linear_temp-=0.1;
+            linear_temp = -0.5;
+            angular_temp = 0;
             break;
         // 停止
         case 32:
