@@ -4,7 +4,7 @@ project(line_follower)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
-find_package(OpenCV 4.2 REQUIRED) # 找OpenCV 4.2 安装路径
+find_package(OpenCV REQUIRED) # 找OpenCV 4.2 安装路径
 
 catkin_package()
 include_directories(
