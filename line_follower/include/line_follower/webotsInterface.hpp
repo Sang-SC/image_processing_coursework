@@ -13,10 +13,11 @@
 #include <webots_ros/set_int.h>
 #include <webots_ros/Float64Stamped.h>
 #include <webots_ros/BoolStamped.h>
+#include <webots_ros/Int32Stamped.h>
 #include <opencv2/opencv.hpp>
 
 
-void webots_init();
-void CameraCallback(const sensor_msgs::Image::ConstPtr &value);
+void webotsInit();
+void enableKeyboard();
 
 #endif
