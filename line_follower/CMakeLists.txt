@@ -18,10 +18,16 @@ add_library(webotsInterface
   src/webotsInterface.cpp
 )
 
+add_library(level1
+  include/line_follower/level1.hpp
+  src/level1.cpp
+)
+
 add_executable(test_opencv src/test_opencv.cpp)
 target_link_libraries(test_opencv	${catkin_LIBRARIES})
 target_link_libraries(test_opencv	${OpenCV_LIBRARIES})
+target_link_libraries(webotsInterface	${OpenCV_LIBRARIES})
 
 add_executable(main src/main.cpp)
 add_dependencies(main ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(main webotsInterface ${catkin_LIBRARIES})
+target_link_libraries(main webotsInterface level1 ${catkin_LIBRARIES})

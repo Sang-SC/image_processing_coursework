@@ -3,12 +3,15 @@
 **  Author     : ssc
 **********************************************************/
 #include "line_follower/webotsInterface.hpp"
+#include "line_follower/level1.hpp"
 
 using namespace cv;
 using std::string;
+using std::cout;
+using std::endl;
 
 #define TIME_STEP   32                        // 时钟
-#define ROBOT_NAME  "/tianbot_mini/"           // ROBOT名称
+#define ROBOT_NAME  "tianbot_mini/"           // ROBOT名称
 #define NMOTORS 2                             // 电机数量
 
 ros::NodeHandle *n;
@@ -20,7 +23,6 @@ ros::ServiceClient set_velocity_client;       // 电机速度通讯service客户
 webots_ros::set_float set_velocity_srv;       // 电机速度服务数据
 ros::ServiceClient set_position_client;       // 电机位置通讯service客户端
 webots_ros::set_float set_position_srv;       // 电机位置服务数据
-ros::Publisher speed_puber;                     // 话题发布
 
 double speeds[NMOTORS]={0.0,0.0};             // 两个电机速度值，范围为 0～100
 float linear_temp=0, angular_temp=0;          // 暂存的线速度和角速度
@@ -38,17 +40,9 @@ webots_ros::set_int keyboardEnablesrv;        // 键盘控制service数据
 * 函数功能：webots摄像头数据回调函数
 */
 void cameraCB(const sensor_msgs::Image::ConstPtr &value){
-    static int count;
-    if (count % 100 == 0)
-    {
-        ROS_INFO("已经获取到第%d张图像", count);
-    }
-    ++count;
-    // // 将webots提供的uchar格式数据转换成Mat
-    // Mat img_rgb = Mat(value->data).clone().reshape(4, 64);
-    // Mat img;
-    // img = ImageProcessFun(img_rgb);
-    // FindPoints(img);
+    // 将webots提供的uchar格式数据转换成Mat
+    Mat srcImg = Mat(value->data).clone().reshape(4, 512);
+    level1(srcImg);
 }
 
 
@@ -78,8 +72,7 @@ void webotsInit()
             ROS_INFO("电机%s速度设置为0。", motorNames[i]);   
         else     
             ROS_ERROR("电机%s的set_velocity服务无响应", motorNames[i]);
-    }   
-    speed_puber = n->advertise<nav_msgs::Odometry>("/vel",10);        // /vel 话题，用于配置odom
+    }
 
     // 初始化摄像头
     set_camera_client = n->serviceClient<webots_ros::set_int>(string(ROBOT_NAME)+string("camera/enable"));
@@ -131,7 +124,7 @@ void keyboardDataCB(const webots_ros::Int32Stamped::ConstPtr &value)
 /*
 * 函数功能：将速度请求以set_float的形式发送给set_velocity_srv
 */
-void updateSpeed() {   
+void keyboardUpdateSpeed() {   
     nav_msgs::Odometry speed_data;
     float L = 0.6;                          // 两轮之间的距离
     // 根据双轮差动底盘算法计算
@@ -148,14 +141,6 @@ void updateSpeed() {
         set_velocity_client.call(set_velocity_srv);
     }
     ROS_INFO("左轮转速：%lf, 右轮转速：%lf", speeds[0], speeds[1]);
-    // 发送/vel 数据
-    speed_data.header.stamp = ros::Time::now();
-    speed_data.twist.twist.linear.x = linear_temp;
-    speed_data.twist.twist.angular.z = angular_temp;
-    speed_puber.publish(speed_data);
-    // 速度值清零
-    speeds[0]=0;
-    speeds[1]=0;
 }
 
 
@@ -180,7 +165,7 @@ void enableKeyboard()
         ROS_INFO("注意：需要在Webots界面使用键盘控制！！！");
         while (ros::ok()) {   
             ros::spinOnce();
-            updateSpeed();
+            keyboardUpdateSpeed();
             if (!time_step_client.call(time_step_srv) || !time_step_srv.response.success)
             {  
                 ROS_ERROR("time_step服务无响应");     
